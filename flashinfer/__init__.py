@@ -149,5 +149,6 @@ from .trtllm_low_latency_gemm import (
 )
 from .utils import next_positive_power_of_2 as next_positive_power_of_2
 from .xqa import xqa as xqa
+from .xqa import xqa_mla as xqa_mla
 
 __is_paddle_compatible_library__ = True
