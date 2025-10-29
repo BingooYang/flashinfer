@@ -140,7 +140,7 @@ def is_cuda_oom_error_str(e: str) -> bool:
     return "CUDA" in e and "out of memory" in e
 
 
-@pytest.hookimpl(tryfirst=True)
+@pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item):
     # skip OOM error and missing JIT cache errors
     try:
