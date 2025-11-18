@@ -21,7 +21,6 @@ import functools
 from typing import Tuple
 import pytest
 from abc import ABC, abstractmethod
-from enum import IntEnum
 from typing import Dict
 import torch
 from cuda.bindings import runtime
@@ -59,6 +58,9 @@ def cur_get_compute_capability(device: torch.device) -> Tuple[int, int]:
     if device.type != "cuda":
         raise ValueError("device must be a cuda device")
     return torch.cuda.get_device_capability(device.index)
+
+
+from .test_utils import skip_checks, QuantMode
 
 
 # Max num tokens to tune for trtllm-gen fused moe
@@ -226,17 +228,6 @@ class CUDAGraphMoE:
             tune_max_num_tokens=TUNE_MAX_NUM_TOKENS,
         )
         return output  # Extract tensor from tuple
-
-
-class QuantMode(IntEnum):
-    """Supported quantization modes for MoE testing."""
-
-    FP4_NVFP4_NVFP4 = 1
-    FP4_MXFP4_MXFP8 = 2
-    FP4_MXFP4_Bf16 = 3
-    FP8_BLOCK_SCALE = 4
-    FP8_PER_TENSOR = 5
-    BF16 = 6
 
 
 # ====================================================================================
@@ -2041,68 +2032,6 @@ def cache_permute_indices():
     # The cache key is now a tuple of (weight_type, shape)
     _cache_permute_indices: Dict[tuple, torch.Tensor] = {}
     return _cache_permute_indices
-
-
-def skip_checks(
-    moe_impl,
-    routing_config,
-    weight_processing,
-    gated_act_type,
-    num_tokens,
-    hidden_size,
-    intermediate_size,
-):
-    """Common skip logic for all tests."""
-    device = paddle.get_device()
-    compute_capability = cur_get_compute_capability(device)
-    if compute_capability[0] not in [10]:
-        pytest.skip("These tests are only guaranteed to work on SM100 and SM103 GPUs.")
-    # Skip incompatible combinations
-    if gated_act_type == GatedActType.GeGlu and (
-        type(moe_impl) is not FP4Moe
-        or moe_impl.quant_mode != QuantMode.FP4_NVFP4_NVFP4
-        or routing_config["routing_method_type"] != RoutingMethodType.TopK
-        or num_tokens > 128
-    ):
-        pytest.skip(
-            f"Incompatible: {moe_impl.name} + {gated_act_type} + {routing_config['routing_method_type']} + {num_tokens}"
-        )
-    elif gated_act_type == GatedActType.SwiGlu and (
-        hidden_size > 1024 or intermediate_size > 1024
-    ):
-        pytest.skip(
-            f"Skip for testing speed: {gated_act_type} + {hidden_size} + {intermediate_size}"
-        )
-
-    # Skip large intermediate sizes for configurations with many experts
-    if routing_config["num_experts"] >= 512 and intermediate_size > 512:
-        pytest.skip(
-            f"Skipping for testing speed: intermediate_size={intermediate_size} with {routing_config['num_experts']} experts"
-        )
-
-    if type(moe_impl) not in routing_config["compatible_moe_impls"]:
-        pytest.skip(
-            f"Incompatible: {moe_impl.name} + {routing_config['routing_method_type'].name}"
-        )
-    if type(moe_impl) not in weight_processing["compatible_moe_impls"]:
-        pytest.skip(
-            f"Incompatible: {moe_impl.name} + {weight_processing['use_shuffled_weight']} + {weight_processing['layout']}"
-        )
-    if intermediate_size not in routing_config["compatible_intermediate_size"]:
-        pytest.skip(
-            f"Incompatible: intermediate_size={intermediate_size} with {routing_config['routing_method_type'].name} routing ({routing_config['num_experts']} experts)"
-        )
-
-    # TODO(jimmzhou): enable MxFP4xBf16 on SM103
-    if (
-        type(moe_impl) is FP4Moe
-        and moe_impl.quant_mode == QuantMode.FP4_MXFP4_Bf16
-        and compute_capability[0] == 10
-        and compute_capability[1] == 3
-    ):
-        pytest.xfail(
-            "Note(jimmzhou): Make MxFP4xBf16 nonfunctional on SM103 to avoid B200 regression"
-        )
 
 
 def run_moe_test(
