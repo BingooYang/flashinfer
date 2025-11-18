@@ -60,7 +60,7 @@ def cur_get_compute_capability(device: torch.device) -> Tuple[int, int]:
     return torch.cuda.get_device_capability(device.index)
 
 
-from .test_utils import skip_checks, QuantMode
+from .utils import skip_checks, QuantMode
 
 
 # Max num tokens to tune for trtllm-gen fused moe
