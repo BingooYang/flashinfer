@@ -110,6 +110,9 @@ def find_loaded_library(lib_name) -> Optional[str]:
 from .dsv3_optimizations import (
     gen_dsv3_router_gemm_module as gen_dsv3_router_gemm_module,
 )
+from .dsv3_optimizations import (
+    gen_dsv3_fused_routing_module as gen_dsv3_fused_routing_module,
+)
 
 
 cuda_lib_path = os.environ.get(
