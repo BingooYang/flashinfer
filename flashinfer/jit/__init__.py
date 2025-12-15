@@ -108,6 +108,7 @@ def find_loaded_library(lib_name) -> Optional[str]:
     return path
 
 
+from .comm import gen_moe_alltoall_module as gen_moe_alltoall_module
 from .dsv3_optimizations import (
     gen_dsv3_router_gemm_module as gen_dsv3_router_gemm_module,
 )
