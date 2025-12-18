@@ -1128,6 +1128,7 @@ def get_trtllm_moe_sm100_module():
                     self.intermediate_size,
                     kwargs["local_expert_offset"],
                     self.num_local_experts,
+                    kwargs["routed_scaling_factor"],
                     kwargs["routing_method_type"],
                     kwargs["use_shuffled_weight"],
                     kwargs["weight_layout"],
@@ -1305,6 +1306,7 @@ def get_trtllm_moe_sm100_module():
         intermediate_size: int,
         local_expert_offset: int,
         local_num_experts: int,
+        routed_scaling_factor: Optional[float],
         routing_method_type: int,
         use_shuffled_weight: bool,
         weight_layout: int,
@@ -1363,6 +1365,7 @@ def get_trtllm_moe_sm100_module():
             topk_group=topk_group,
             local_expert_offset=local_expert_offset,
             local_num_experts=local_num_experts,
+            routed_scaling_factor=routed_scaling_factor,
             routing_method_type=routing_method_type,
             use_shuffled_weight=use_shuffled_weight,
             weight_layout=weight_layout,
@@ -1383,6 +1386,7 @@ def get_trtllm_moe_sm100_module():
             intermediate_size,
             local_expert_offset,
             local_num_experts,
+            routed_scaling_factor,
             routing_method_type,
             use_shuffled_weight,
             weight_layout,
@@ -2112,6 +2116,7 @@ def trtllm_bf16_moe(
     intermediate_size: int,
     local_expert_offset: int,
     local_num_experts: int,
+    routed_scaling_factor: Optional[float] = None,
     routing_method_type: int = 0,
     use_shuffled_weight: bool = True,
     weight_layout: int = WeightLayout.BlockMajorK,
@@ -2141,6 +2146,7 @@ def trtllm_bf16_moe(
         intermediate_size: Size of intermediate layer.
         local_expert_offset: Offset of local experts in global expert space.
         local_num_experts: Number of experts handled by this device.
+        routed_scaling_factor (Optional[float]): Scaling factor for routing (can be None for some routing methods)
         routing_method_type: Type of routing method to use (default: 0).
             - 0: Default (Softmax -> TopK)
             - 1: Renormalize (TopK -> Softmax)
@@ -2171,6 +2177,7 @@ def trtllm_bf16_moe(
         intermediate_size,
         local_expert_offset,
         local_num_experts,
+        routed_scaling_factor,
         routing_method_type,
         use_shuffled_weight,
         weight_layout,
@@ -2596,6 +2603,7 @@ def trtllm_fp4_block_scale_routed_moe(
 @flashinfer_api
 def trtllm_mxint4_block_scale_moe(
     routing_logits: torch.Tensor,
+    routing_bias: Optional[torch.Tensor],
     hidden_states: torch.Tensor,
     gemm1_weights: torch.Tensor,
     gemm1_weights_scale: torch.Tensor,
@@ -2622,6 +2630,8 @@ def trtllm_mxint4_block_scale_moe(
     Args:
         routing_logits (torch.Tensor): shape [seq_len, num_experts]
             Input tensor of routing logits. Supports float32, bfloat16.
+        routing_bias: Optional [num_experts] tensor of routing bias.
+            Must be bfloat16 if provided.
         hidden_states (torch.Tensor): shape [seq_len, hidden_size]
             Tensor of input hidden states. Supports bfloat16.
         gemm1_weights (torch.Tensor): shape [num_experts, 2 * intermediate_size, hidden_size // 2]
@@ -2661,7 +2671,7 @@ def trtllm_mxint4_block_scale_moe(
     """
     return get_trtllm_moe_sm100_module().trtllm_mxint4_block_scale_moe(
         routing_logits,
-        None,
+        routing_bias,
         hidden_states,
         gemm1_weights,
         gemm1_weights_scale,
