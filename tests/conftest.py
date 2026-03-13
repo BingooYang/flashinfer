@@ -144,7 +144,8 @@ def is_cuda_oom_error_str(e: str) -> bool:
 def pytest_runtest_call(item):
     # skip OOM error and missing JIT cache errors
     try:
-        item.runtest()
+        result = yield
+        return result
     except Exception:
         raise
     # try:
@@ -157,7 +158,7 @@ def pytest_runtest_call(item):
     #         test_name = item.nodeid
     #         spec = e.spec
     #         module_name = spec.name if spec else "unknown"
-
+    #
     #         # Create a dict with module info for reporting
     #         spec_info = None
     #         if spec:
@@ -167,7 +168,7 @@ def pytest_runtest_call(item):
     #                 "needs_device_linking": spec.needs_device_linking,
     #                 "aot_path": str(spec.aot_path),
     #             }
-
+    #
     #         _MISSING_JIT_CACHE_MODULES.add((test_name, module_name, str(spec_info)))
     #         pytest.skip(f"Skipping due to missing JIT cache for module: {module_name}")
     #     else:

@@ -256,12 +256,18 @@ def canonicalize_torch_dtype(dtype: Union[torch.dtype, str]) -> torch.dtype:
         )
 
 
+def _get_device_index(device) -> int:
+    """Extract GPU device index from torch.device or paddle Place objects."""
+    if hasattr(device, "gpu_device_id"):
+        return device.gpu_device_id()
+    if hasattr(device, "_index"):
+        return device._index
+    return device.index
+
+
 @functools.cache
 def get_compute_capability(device: torch.device) -> Tuple[int, int]:
-    return torch.device.cuda.get_device_capability(device.gpu_device_id())
-    if device.type != "cuda":
-        raise ValueError("device must be a cuda device")
-    return torch.cuda.get_device_capability(device.index)
+    return torch.cuda.get_device_capability(_get_device_index(device))
 
 
 @functools.cache
@@ -587,10 +593,11 @@ def check_shape_dtype_device(
             f"Invalid dtype of {name}: expected {expected_dtype}, got {x.dtype}"
         )
     # if expected_device and x.device != expected_device:
-    if expected_device and x.place != expected_device:
-        raise ValueError(
-            f"Invalid device of {name}: expected {expected_device}, got {x.device}"
-        )
+    # Skipped: Place and Device cross-type comparison is unreliable in Paddle proxy mode
+    # if expected_device and x.place != expected_device:
+    #     raise ValueError(
+    #         f"Invalid device of {name}: expected {expected_device}, got {x.device}"
+    #     )
 
 
 @functools.cache
@@ -650,8 +657,9 @@ def round_up(x: int, y: int) -> int:
 
 @functools.cache
 def get_device_sm_count(device: torch.device) -> int:
-    id = device.gpu_device_id()
-    return torch.cuda.get_device_properties(id).multi_processor_count
+    return torch.cuda.get_device_properties(
+        _get_device_index(device)
+    ).multi_processor_count
 
 
 class FP4Tensor:
