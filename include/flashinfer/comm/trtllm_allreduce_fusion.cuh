@@ -7,7 +7,9 @@
 #include <cuda_fp4.h>
 #endif
 
+#include <cstdint>
 #include <cuda/std/optional>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 
