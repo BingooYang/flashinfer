@@ -27,7 +27,7 @@ High-Performance GPU Kernels for Inference
 > git clone https://github.com/PFCCLab/flashinfer.git
 > cd flashinfer
 > git submodule update --init
-> pip install apache-tvm-ffi>=0.1.2  # Use TVM FFI 0.1.2 or above
+> pip install apache-tvm-ffi>=0.1.6,!=0.1.8,!=0.1.8.post0,<0.2  # Use TVM FFI 0.1.2 or above
 > pip install filelock jinja2  # Install tools for jit compilation
 > pip install --no-build-isolation . -v
 > ```
